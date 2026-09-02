@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenMaps — Mapping Creator</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <!-- ====== TOP BAR ====== -->
+  <header id="topbar">
+    <div class="brand"><span class="logo"></span>OPENMAPS</div>
+    <div class="group">
+      <button id="btn-play" class="btn accent" title="Run the war simulation (Space)">▶ PLAY</button>
+      <label class="inline">Speed
+        <input id="sim-speed" type="range" min="1" max="5" step="1" value="2">
+        <span id="sim-speed-val">2x</span>
+      </label>
+      <span id="sim-status" class="status">paused</span>
+    </div>
+    <div class="group">
+      <button id="btn-undo" class="btn" title="Undo (Ctrl+Z)">⟲ UNDO</button>
+      <button id="btn-new" class="btn" title="New world">NEW WORLD</button>
+      <button id="btn-save" class="btn" title="Save scenario as JSON">SAVE</button>
+      <button id="btn-load" class="btn" title="Load scenario JSON">LOAD</button>
+      <input id="file-load" type="file" accept=".json,application/json" hidden>
+      <button id="btn-png" class="btn" title="Export the map as a PNG image">PNG</button>
+      <button id="btn-help" class="btn" title="Help">?</button>
+    </div>
+  </header>
+
+  <div id="main">
+    <!-- ====== TOOLBAR ====== -->
+    <nav id="toolbar">
+      <button class="tool active" data-tool="paint"  title="Paint territory (B)"><span class="ico">🖌</span>Paint</button>
+      <button class="tool" data-tool="erase"  title="Erase territory (E)"><span class="ico">◻</span>Erase</button>
+      <button class="tool" data-tool="fill"   title="Fill region (G)"><span class="ico">▣</span>Fill</button>
+      <button class="tool" data-tool="picker" title="Pick nation from map (I)"><span class="ico">✎</span>Pick</button>
+      <hr>
+      <button class="tool" data-tool="land"   title="Raise land (L)"><span class="ico">▲</span>Land</button>
+      <button class="tool" data-tool="water"  title="Lower into water (W)"><span class="ico">≈</span>Water</button>
+      <hr>
+      <button class="tool" data-tool="unit"   title="Place army unit (U)"><span class="ico">➤</span>Unit</button>
+      <button class="tool" data-tool="select" title="Select / drag / rotate units (V)"><span class="ico">✥</span>Move</button>
+      <hr>
+      <button class="tool" data-tool="pan"    title="Pan map (H, or hold Space / middle mouse)"><span class="ico">✋</span>Pan</button>
+      <div class="brush">
+        <label>Brush<br><span id="brush-val">4</span></label>
+        <input id="brush-size" type="range" min="1" max="30" value="4" orient="vertical">
+      </div>
+    </nav>
+
+    <!-- ====== MAP ====== -->
+    <div id="viewport">
+      <canvas id="map"></canvas>
+      <div id="hud"></div>
+    </div>
+
+    <!-- ====== SIDE PANEL ====== -->
+    <aside id="sidebar">
+      <section>
+        <h2>Nations <button id="btn-add-nation" class="btn small accent">+ NEW</button></h2>
+        <ul id="nation-list"></ul>
+      </section>
+
+      <section id="nation-editor" class="hidden">
+        <h2>Edit nation</h2>
+        <label>Name <input id="nat-name" type="text" maxlength="32"></label>
+        <label>Colour <input id="nat-color" type="color"></label>
+        <label class="row">Show label <input id="nat-label" type="checkbox" checked></label>
+        <div class="flag-editor">
+          <div class="flag-head">Flag
+            <span class="palette" id="flag-palette"></span>
+          </div>
+          <canvas id="flag-canvas" width="12" height="8"></canvas>
+          <div class="flag-presets">
+            <button class="btn tiny" data-preset="tri-h">≡</button>
+            <button class="btn tiny" data-preset="tri-v">|||</button>
+            <button class="btn tiny" data-preset="bi-h">▬</button>
+            <button class="btn tiny" data-preset="cross">✚</button>
+            <button class="btn tiny" data-preset="nordic">✝</button>
+            <button class="btn tiny" data-preset="diag">◩</button>
+            <button class="btn tiny" data-preset="random">?</button>
+          </div>
+        </div>
+        <div class="stat" id="nat-stats"></div>
+        <button id="btn-del-nation" class="btn danger small">DELETE NATION</button>
+      </section>
+
+      <section id="unit-editor" class="hidden">
+        <h2>Unit</h2>
+        <div class="stat" id="unit-owner"></div>
+        <label>Size <span id="unit-size-val">3</span>
+          <input id="unit-size" type="range" min="1" max="6" value="3"></label>
+        <label>Heading <span id="unit-angle-val">0°</span>
+          <input id="unit-angle" type="range" min="0" max="359" value="0"></label>
+        <label class="row">Orders
+          <select id="unit-order">
+            <option value="advance">Advance</option>
+            <option value="hold">Hold position</option>
+          </select>
+        </label>
+        <div class="stat" id="unit-hp"></div>
+        <div class="row">
+          <button id="btn-unit-heal" class="btn small">REINFORCE</button>
+          <button id="btn-del-unit" class="btn danger small">DISBAND</button>
+        </div>
+        <p class="hint">Drag to move · drag the ring handle or press Q / E to rotate</p>
+      </section>
+
+      <section>
+        <h2>World</h2>
+        <label class="row">Paint on water <input id="opt-paint-water" type="checkbox"></label>
+        <label class="row">Show borders <input id="opt-borders" type="checkbox" checked></label>
+        <label class="row">Show grid <input id="opt-grid" type="checkbox"></label>
+        <div class="stat" id="world-stats"></div>
+      </section>
+    </aside>
+  </div>
+
+  <!-- ====== TIMELINE ====== -->
+  <footer id="timeline">
+    <button id="tl-start" class="btn small" title="Jump to start">⏮</button>
+    <button id="tl-play" class="btn small" title="Play timelapse">▶</button>
+    <button id="tl-end" class="btn small" title="Jump to end">⏭</button>
+    <input id="tl-slider" type="range" min="0" max="0" value="0">
+    <span id="tl-label">0 / 0</span>
+    <label class="inline">FPS <input id="tl-fps" type="number" min="1" max="60" value="20"></label>
+    <button id="btn-record" class="btn accent small" title="Render the timelapse to a WebM video">⏺ EXPORT VIDEO</button>
+    <span id="rec-status" class="status"></span>
+  </footer>
+</div>
+
+<!-- ====== NEW WORLD DIALOG ====== -->
+<dialog id="dlg-new">
+  <form method="dialog">
+    <h2>New world</h2>
+    <label>Size
+      <select id="new-size">
+        <option value="256x144">Small (256 × 144)</option>
+        <option value="400x225" selected>Medium (400 × 225)</option>
+        <option value="640x360">Large (640 × 360)</option>
+      </select></label>
+    <label>Type
+      <select id="new-type">
+        <option value="continents" selected>Continents</option>
+        <option value="islands">Archipelago</option>
+        <option value="pangea">Pangea</option>
+        <option value="blank-land">Blank land</option>
+        <option value="blank-water">Blank ocean</option>
+      </select></label>
+    <label>Seed <input id="new-seed" type="text" placeholder="random"></label>
+    <label>Starting nations <input id="new-nations" type="number" min="0" max="40" value="6"></label>
+    <div class="row right">
+      <button value="cancel" class="btn">CANCEL</button>
+      <button value="ok" id="new-ok" class="btn accent">CREATE</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ====== HELP DIALOG ====== -->
+<dialog id="dlg-help">
+  <form method="dialog">
+    <h2>OpenMaps — how to play</h2>
+    <p><b>Draw history the way you want it.</b> Paint nations, shape coastlines, design flags, then push armies across the map and watch borders move. Everything you do is recorded to a timelapse you can export as a video.</p>
+    <ul>
+      <li><b>Paint / Erase / Fill</b> – pixel-perfect territory brush. Pick a nation on the right first.</li>
+      <li><b>Land / Water</b> – reshape the terrain.</li>
+      <li><b>Unit</b> – click to place an army for the selected nation. <b>Move</b> – drag armies, rotate with the ring handle or Q / E.</li>
+      <li><b>PLAY</b> – armies advance in their heading, capturing land. When two enemy armies meet they form a front and fight; the bigger, healthier army wins. Adjust size / reinforce to decide the outcome.</li>
+      <li><b>Timeline</b> – scrub through history, play it back, or <b>EXPORT VIDEO</b> (WebM, no external software needed).</li>
+      <li><b>Camera</b> – scroll to zoom, hold Space / middle-mouse / Pan tool to drag.</li>
+      <li><b>Shortcuts</b> – B E G I L W U V H tools · [ ] brush size · Ctrl+Z undo · Space play/pause · Delete removes unit.</li>
+    </ul>
+    <div class="row right"><button value="ok" class="btn accent">GOT IT</button></div>
+  </form>
+</dialog>
+
+<script src="js/util.js"></script>
+<script src="js/mapgen.js"></script>
+<script src="js/state.js"></script>
+<script src="js/history.js"></script>
+<script src="js/render.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/tools.js"></script>
+<script src="js/recorder.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

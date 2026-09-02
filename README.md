@@ -25,7 +25,8 @@ python3 -m http.server 8000
   palette, presets (tricolour, cross, nordic, diagonal, …) or a random generator.
 - **Arrows** – with the Arrow tool, drag anywhere to draw an arrow (straight or curved) for
   the selected nation. A front advances along it and every piece of land it crosses flips
-  to that nation; the brush size sets the width of the swath.
+  to that nation; the brush size sets the width of the swath. Thin gaps between neighbouring
+  arrows, and any pocket of land an advance fully surrounds, are filled in automatically.
 - **Armies** – place a unit, then drag from it to draw its arrow. The army marches along it
   and converts the land it crosses. When enemy armies meet they stop and fight; the bigger, healthier side wins and
   carries on. Pause time to queue several arrows, reinforce, resize or disband units to

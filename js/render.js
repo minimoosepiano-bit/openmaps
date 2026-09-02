@@ -9,6 +9,7 @@ const Render = (() => {
   const mouse = { x: -1, y: -1, over: false };
   let labels = [];                // [{id, x, y}]
   let hoverUnit = null;
+  let pendingArrow = null;        // arrow being drawn right now [{x,y,nation}, ...]
 
   const C = {
     deep: [26, 58, 112], shallow: [42, 96, 160], coast: [78, 150, 200],
@@ -180,22 +181,41 @@ const Render = (() => {
     c.fillStyle = Util.luminance(col) > 0.6 ? '#000' : '#fff';
     c.fillText(String(u.size), 0, 0);
     if (selected || hovered) {
-      c.beginPath(); c.arc(0, 0, r * 2.2, 0, Math.PI * 2);
+      c.beginPath(); c.arc(0, 0, r * 1.6, 0, Math.PI * 2);
       c.strokeStyle = selected ? '#4fa3ff' : 'rgba(255,255,255,.6)'; c.lineWidth = 2;
       c.setLineDash([4, 4]); c.stroke(); c.setLineDash([]);
-      if (selected) {
-        // rotate handle
-        const hx = Math.cos(u.angle) * r * 2.2, hy = Math.sin(u.angle) * r * 2.2;
-        c.beginPath(); c.arc(hx, hy, Math.max(5, zoom * 1.2), 0, Math.PI * 2);
-        c.fillStyle = '#4fa3ff'; c.fill(); c.strokeStyle = '#000'; c.stroke();
-      }
     }
     c.restore();
   }
 
-  function handlePos(u) {
-    const r = unitRadius(u) * 2.2;
-    return { x: u.x + Math.cos(u.angle) * r, y: u.y + Math.sin(u.angle) * r, r: Math.max(5 / cam.zoom, 1.2) };
+  /* Movement arrow: from the unit through its waypoints, with an arrowhead at the end. */
+  function drawArrow(c, color, pts, camX, camY, zoom, alpha) {
+    if (pts.length < 2) return;
+    const P = pts.map(p => [(p.x - camX) * zoom, (p.y - camY) * zoom]);
+    c.save();
+    c.globalAlpha = alpha;
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    const w = Math.max(2, zoom * 1.1);
+    for (const [style, lw] of [['rgba(0,0,0,.8)', w + 3], [color, w]]) {
+      c.strokeStyle = style; c.lineWidth = lw; c.beginPath();
+      c.moveTo(P[0][0], P[0][1]);
+      for (let i = 1; i < P.length; i++) c.lineTo(P[i][0], P[i][1]);
+      c.stroke();
+    }
+    // arrowhead
+    const [ex, ey] = P[P.length - 1];
+    let k = P.length - 2;
+    while (k > 0 && Math.hypot(ex - P[k][0], ey - P[k][1]) < w * 2) k--;
+    const a = Math.atan2(ey - P[k][1], ex - P[k][0]);
+    const hs = Math.max(8, zoom * 3.2);
+    c.beginPath();
+    c.moveTo(ex + Math.cos(a) * hs * 0.6, ey + Math.sin(a) * hs * 0.6);
+    c.lineTo(ex + Math.cos(a + 2.5) * hs, ey + Math.sin(a + 2.5) * hs);
+    c.lineTo(ex + Math.cos(a - 2.5) * hs, ey + Math.sin(a - 2.5) * hs);
+    c.closePath();
+    c.fillStyle = color; c.fill();
+    c.strokeStyle = 'rgba(0,0,0,.8)'; c.lineWidth = 2; c.stroke();
+    c.restore();
   }
 
   /* Draw the whole scene into an arbitrary context (used for the viewport, PNG and video). */
@@ -233,6 +253,17 @@ const Render = (() => {
       c.fillStyle = '#fff'; c.fillText(n.name, sx, sy - fontPx * 0.55);
     }
 
+    // movement arrows
+    for (const u of State.units) {
+      if (!u.path.length) continue;
+      const n = State.nation(u.nation);
+      drawArrow(c, n ? n.color : '#fff', [{ x: u.x, y: u.y }, ...u.path], camX, camY, zoom, 0.85);
+    }
+    if (overlays && pendingArrow && pendingArrow.length > 1) {
+      const n = State.nation(pendingArrow[0].nation);
+      drawArrow(c, n ? n.color : '#fff', pendingArrow, camX, camY, zoom, 0.6);
+    }
+
     // units
     for (const u of State.units) {
       const sx = (u.x - camX) * zoom, sy = (u.y - camY) * zoom;
@@ -257,7 +288,7 @@ const Render = (() => {
       const w = screenToWorld(mouse.x, mouse.y);
       const s = worldToScreen(w.x, w.y);
       ctx.save(); ctx.translate(s.x, s.y); ctx.globalAlpha = 0.5;
-      drawUnit(ctx, { nation: State.selectedNation, x: 0, y: 0, angle: 0, size: 3, hp: 300 }, cam.zoom, false, false);
+      drawUnit(ctx, { nation: State.selectedNation, x: 0, y: 0, angle: 0, size: 3, hp: 300, path: [] }, cam.zoom, false, false);
       ctx.restore();
     }
   }
@@ -281,9 +312,10 @@ const Render = (() => {
   }
 
   return {
-    init, fit, draw, resize, renderFull, screenToWorld, worldToScreen, clientToScreen, zoomAt, unitAt, handlePos, unitRadius,
+    init, fit, draw, resize, renderFull, screenToWorld, worldToScreen, clientToScreen, zoomAt, unitAt, unitRadius,
     cam, mouse, drawFlag,
     set hoverUnit(v) { hoverUnit = v; },
+    set pendingArrow(v) { pendingArrow = v; },
     get labels() { return labels; },
   };
 })();

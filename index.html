@@ -12,7 +12,7 @@
   <header id="topbar">
     <div class="brand"><span class="logo"></span>OPENMAPS</div>
     <div class="group">
-      <button id="btn-play" class="btn accent" title="Run the war simulation (Space)">▶ PLAY</button>
+      <button id="btn-play" class="btn accent" title="Pause / resume time (Space)">▶ PLAY</button>
       <label class="inline">Speed
         <input id="sim-speed" type="range" min="1" max="5" step="1" value="2">
         <span id="sim-speed-val">2x</span>
@@ -42,7 +42,7 @@
       <button class="tool" data-tool="water"  title="Lower into water (W)"><span class="ico">≈</span>Water</button>
       <hr>
       <button class="tool" data-tool="unit"   title="Place army unit (U)"><span class="ico">➤</span>Unit</button>
-      <button class="tool" data-tool="select" title="Select / drag / rotate units (V)"><span class="ico">✥</span>Move</button>
+      <button class="tool" data-tool="select" title="Select armies and draw their arrows (V)"><span class="ico">➔</span>Arrow</button>
       <hr>
       <button class="tool" data-tool="pan"    title="Pan map (H, or hold Space / middle mouse)"><span class="ico">✋</span>Pan</button>
       <div class="brush">
@@ -93,20 +93,14 @@
         <div class="stat" id="unit-owner"></div>
         <label>Size <span id="unit-size-val">3</span>
           <input id="unit-size" type="range" min="1" max="6" value="3"></label>
-        <label>Heading <span id="unit-angle-val">0°</span>
-          <input id="unit-angle" type="range" min="0" max="359" value="0"></label>
-        <label class="row">Orders
-          <select id="unit-order">
-            <option value="advance">Advance</option>
-            <option value="hold">Hold position</option>
-          </select>
-        </label>
+        <div class="stat" id="unit-status"></div>
         <div class="stat" id="unit-hp"></div>
         <div class="row">
+          <button id="btn-unit-stop" class="btn small">STOP</button>
           <button id="btn-unit-heal" class="btn small">REINFORCE</button>
           <button id="btn-del-unit" class="btn danger small">DISBAND</button>
         </div>
-        <p class="hint">Drag to move · drag the ring handle or press Q / E to rotate</p>
+        <p class="hint">Drag from the army to draw its arrow · it marches along it and claims the land it crosses · Shift-drag relocates · right-click / Esc cancels</p>
       </section>
 
       <section>
@@ -167,11 +161,12 @@
     <ul>
       <li><b>Paint / Erase / Fill</b> – pixel-perfect territory brush. Pick a nation on the right first.</li>
       <li><b>Land / Water</b> – reshape the terrain.</li>
-      <li><b>Unit</b> – click to place an army for the selected nation. <b>Move</b> – drag armies, rotate with the ring handle or Q / E.</li>
-      <li><b>PLAY</b> – armies advance in their heading, capturing land. When two enemy armies meet they form a front and fight; the bigger, healthier army wins. Adjust size / reinforce to decide the outcome.</li>
+      <li><b>Unit</b> – click to place an army for the selected nation. <b>Arrow</b> – drag from an army to draw the arrow it should follow. Curves are fine.</li>
+      <li>The army marches along its arrow and every bit of land it crosses becomes its nation's. When two enemy armies meet they stop and fight; the bigger, healthier army wins and continues. Adjust size / reinforce to decide the outcome.</li>
+      <li><b>PAUSE</b> – freeze time to draw several arrows first, then let them all go at once.</li>
       <li><b>Timeline</b> – scrub through history, play it back, or <b>EXPORT VIDEO</b> (WebM, no external software needed).</li>
       <li><b>Camera</b> – scroll to zoom, hold Space / middle-mouse / Pan tool to drag.</li>
-      <li><b>Shortcuts</b> – B E G I L W U V H tools · [ ] brush size · Ctrl+Z undo · Space play/pause · Delete removes unit.</li>
+      <li><b>Shortcuts</b> – B E G I L W U V H tools · [ ] brush size · Ctrl+Z undo · Space play/pause · Esc cancels an arrow · Delete removes unit.</li>
     </ul>
     <div class="row right"><button value="ok" class="btn accent">GOT IT</button></div>
   </form>

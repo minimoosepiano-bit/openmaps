@@ -8,7 +8,7 @@ const State = {
   elev: null,    // Uint8Array – elevation, water below MapGen.SEA
   owner: null,   // Uint16Array – nation id per cell, 0 = unclaimed
   nations: [],   // { id, name, color, flag: string[FLAG_W*FLAG_H], label: bool }
-  units: [],     // { id, nation, x, y, angle (rad), size, hp, order, engaged }
+  units: [],     // { id, nation, x, y, angle (rad, facing), size, hp, path:[{x,y}], engaged }
   nextNationId: 1,
   nextUnitId: 1,
   seed: 1,
@@ -23,7 +23,7 @@ const State = {
   showGrid: false,
 
   /* simulation */
-  playing: false,
+  playing: true,
   speed: 2,
   tick: 0,
 
@@ -97,8 +97,8 @@ const State = {
   },
 
   /* ---- units ---- */
-  addUnit(nation, x, y, angle = 0, size = 3) {
-    const u = { id: this.nextUnitId++, nation, x, y, angle, size, hp: this.maxHp(size), order: 'advance', engaged: false };
+  addUnit(nation, x, y, size = 3) {
+    const u = { id: this.nextUnitId++, nation, x, y, angle: 0, size, hp: this.maxHp(size), path: [], engaged: false };
     this.units.push(u);
     return u;
   },
@@ -115,7 +115,7 @@ const State = {
     this.nations = []; this.units = [];
     this.nextNationId = 1; this.nextUnitId = 1;
     this.selectedNation = 0; this.selectedUnit = null;
-    this.playing = false; this.tick = 0;
+    this.playing = true; this.tick = 0;
     this.dirty = true; this.labelsDirty = true;
 
     if (nations > 0 && type !== 'blank-water') this.seedNations(nations);
@@ -185,7 +185,8 @@ const State = {
     this.nations = d.nations; this.units = d.units;
     this.nextNationId = d.nextNationId; this.nextUnitId = d.nextUnitId;
     this.selectedNation = this.nations.length ? this.nations[0].id : 0;
-    this.selectedUnit = null; this.playing = false;
+    this.selectedUnit = null; this.playing = true;
+    for (const u of this.units) { if (!u.path) u.path = []; }
     this.dirty = true; this.labelsDirty = true;
     return d;
   },

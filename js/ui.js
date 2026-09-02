@@ -83,14 +83,7 @@ const UI = (() => {
       const u = State.unit(State.selectedUnit); if (!u) return;
       History.touch(); const ratio = u.hp / State.maxHp(u.size); u.size = +e.target.value; u.hp = Math.round(State.maxHp(u.size) * ratio); History.commit(); refreshUnit();
     });
-    $('unit-angle').addEventListener('input', e => {
-      const u = State.unit(State.selectedUnit); if (!u) return;
-      History.touch(); u.angle = (+e.target.value) * Math.PI / 180; History.commit(); refreshUnit();
-    });
-    $('unit-order').addEventListener('change', e => {
-      const u = State.unit(State.selectedUnit); if (!u) return;
-      History.touch(); u.order = e.target.value; History.commit();
-    });
+    $('btn-unit-stop').addEventListener('click', () => Tools.clearOrders(State.selectedUnit));
     $('btn-unit-heal').addEventListener('click', () => {
       const u = State.unit(State.selectedUnit); if (!u) return;
       History.touch(); u.hp = State.maxHp(u.size); History.commit(); refreshUnit();
@@ -127,7 +120,7 @@ const UI = (() => {
   function playChanged() {
     $('btn-play').textContent = State.playing ? '❚❚ PAUSE' : '▶ PLAY';
     $('btn-play').classList.toggle('danger', State.playing);
-    $('sim-status').textContent = State.playing ? 'war in progress' : 'paused';
+    $('sim-status').textContent = State.playing ? 'time running' : 'paused';
   }
   function timelapseChanged() {
     $('tl-play').textContent = Recorder.playing ? '❚❚' : '▶';
@@ -191,10 +184,10 @@ const UI = (() => {
     const n = State.nation(u.nation);
     $('unit-owner').textContent = `Army of ${n ? n.name : '?'}`;
     $('unit-size').value = u.size; $('unit-size-val').textContent = u.size;
-    const deg = Math.round(((u.angle * 180 / Math.PI) % 360 + 360) % 360);
-    $('unit-angle').value = deg; $('unit-angle-val').textContent = deg + '°';
-    $('unit-order').value = u.order;
-    $('unit-hp').textContent = `Strength ${Math.max(0, Math.round(u.hp))} / ${State.maxHp(u.size)}${u.engaged ? ' · FIGHTING' : ''}`;
+    const status = u.engaged ? 'FIGHTING' : u.path.length ? 'advancing' : 'idle — drag from it to draw an arrow';
+    $('unit-status').textContent = status;
+    $('btn-unit-stop').disabled = !u.path.length;
+    $('unit-hp').textContent = `Strength ${Math.max(0, Math.round(u.hp))} / ${State.maxHp(u.size)}`;
   }
 
   /* ---- hud ---- */

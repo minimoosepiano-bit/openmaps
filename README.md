@@ -23,10 +23,11 @@ python3 -m http.server 8000
 - **Terrain tools** – raise land or sink it into the sea.
 - **Nation editor** – rename, recolour, toggle labels and design a 12×8 pixel flag with a
   palette, presets (tricolour, cross, nordic, diagonal, …) or a random generator.
-- **Armies** – place units, drag them around, rotate them with a handle or `Q`/`E`, set
-  size and orders. Press **PLAY**: armies advance along their heading and claim land. When
-  enemy armies meet they form a front and fight; the bigger, healthier side wins. Reinforce,
-  resize or disband units to decide the outcome.
+- **Armies & arrows** – place a unit, then drag from it to draw an arrow (straight or
+  curved). The army marches along the arrow and every piece of land it crosses flips to its
+  nation. When enemy armies meet they stop and fight; the bigger, healthier side wins and
+  carries on. Pause time to queue several arrows, reinforce, resize or disband units to
+  decide the outcome.
 - **Timeline** – every stroke, edit and simulation tick is a frame. Undo, scrub, play back.
 - **Export** – PNG snapshot of the map, or render the whole history to a WebM timelapse
   video in-browser (MediaRecorder).
@@ -38,14 +39,15 @@ python3 -m http.server 8000
 | --- | --- |
 | `B` `E` `G` `I` | Paint / Erase / Fill / Pick |
 | `L` `W` | Land / Water terrain brush |
-| `U` `V` `H` | Unit / Move / Pan tools |
+| `U` `V` `H` | Unit / Arrow / Pan tools |
 | `[` `]` or Ctrl+wheel | Brush size |
 | Wheel · Space+drag · middle mouse | Zoom · pan |
-| `Q` `E` (shift) | Rotate selected unit |
-| `Space` | Play / pause the war |
+| Drag from army · Shift-drag | Draw its arrow · relocate it |
+| `Esc` · right-click army | Cancel its arrow |
 | `Ctrl+Z` | Undo |
 | `Delete` | Disband selected unit |
 | Right-click map | Pick that nation |
+| `Space` | Pause / resume time |
 | `F` | Fit map to window |
 
 ## Project layout

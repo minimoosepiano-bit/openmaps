@@ -1,10 +1,10 @@
-/* War simulation. Units advance along their heading, claim land in front of them,
-   and fight enemy units that get close. */
+/* War simulation. Units follow the arrows drawn for them and convert the territory
+   they pass through. Enemy units that meet stop and fight until one is destroyed. */
 'use strict';
 
 const Sim = (() => {
   const TICK_MS = 100;
-  const SPEED = 0.55;          // cells per tick at 1x
+  const SPEED = 0.6;            // cells per tick at 1x
   let acc = 0;
 
   function update(dt) {
@@ -15,12 +15,13 @@ const Sim = (() => {
   }
 
   function step() {
-    if (!State.units.length) return;
-    History.begin();
     const units = State.units;
-    const range = u => Render.unitRadius(u) + 2;
+    const active = units.some(u => u.path.length || u.engaged);
+    if (!active) return;
+    History.begin();
+    const range = u => Render.unitRadius(u) + 1.5;
 
-    // 1. engagements: find the closest enemy within contact range for each unit
+    // 1. contact: enemy units within reach of each other are engaged
     for (const u of units) u.engaged = false;
     const enemies = new Map();
     for (let a = 0; a < units.length; a++) {
@@ -37,7 +38,7 @@ const Sim = (() => {
       }
     }
 
-    // 2. combat: damage proportional to the attacker's size and health
+    // 2. combat: damage proportional to the attacker's size and remaining strength
     for (const u of units) {
       const foes = enemies.get(u.id); if (!foes) continue;
       const strength = u.size * (0.5 + 0.5 * u.hp / State.maxHp(u.size));
@@ -45,44 +46,38 @@ const Sim = (() => {
     }
     for (let i = units.length - 1; i >= 0; i--) if (units[i].hp <= 0) State.removeUnit(units[i].id);
 
-    // 3. movement + capture
+    // 3. movement along the arrow + capture
     for (const u of units) {
-      if (u.hp <= 0) continue;
-      const fx = Math.cos(u.angle), fy = Math.sin(u.angle);
-      if (!u.engaged && u.order === 'advance') {
-        const nx = u.x + fx * SPEED, ny = u.y + fy * SPEED;
-        const ci = State.idx(Util.clamp(Math.round(nx), 0, State.w - 1), Util.clamp(Math.round(ny), 0, State.h - 1));
-        const blocked = !State.inBounds(Math.round(nx), Math.round(ny)) || !State.isLand(ci);
-        if (!blocked) {
-          // do not walk straight through a stronger enemy front: stop if an enemy unit is directly ahead
-          u.x = nx; u.y = ny;
-        }
+      if (u.engaged) { capture(u, 0.4); continue; }
+      if (!u.path.length) continue;
+      let remaining = SPEED;
+      while (remaining > 0 && u.path.length) {
+        const t = u.path[0];
+        const d = Util.dist(u.x, u.y, t.x, t.y);
+        if (d <= remaining) { u.x = t.x; u.y = t.y; remaining -= d; u.path.shift(); continue; }
+        u.angle = Math.atan2(t.y - u.y, t.x - u.x);
+        u.x += Math.cos(u.angle) * remaining; u.y += Math.sin(u.angle) * remaining;
+        remaining = 0;
       }
-      capture(u, fx, fy);
+      u.x = Util.clamp(u.x, 0, State.w - 1); u.y = Util.clamp(u.y, 0, State.h - 1);
+      capture(u, 1);
     }
     State.tick++;
     History.commit();
   }
 
-  /* Claim land in a half-disc ahead of the unit (plus a small ring around it). */
-  function capture(u, fx, fy) {
-    const R = Math.ceil(Render.unitRadius(u) + 1.5);
-    const cx = Math.round(u.x), cy = Math.round(u.y);
-    const id = u.nation;
+  /* Convert the land around the unit to its nation. */
+  function capture(u, strength) {
+    const R = Math.ceil(Render.unitRadius(u) + 1);
+    const cx = Math.round(u.x), cy = Math.round(u.y), id = u.nation;
     for (let dy = -R; dy <= R; dy++) {
       for (let dx = -R; dx <= R; dx++) {
-        const d2 = dx * dx + dy * dy;
-        if (d2 > R * R) continue;
-        const dot = dx * fx + dy * fy;
-        // half-disc in front, small full disc around the body
-        if (dot < -0.5 && d2 > 4) continue;
+        if (dx * dx + dy * dy > R * R + 0.5) continue;
         const x = cx + dx, y = cy + dy;
         if (!State.inBounds(x, y)) continue;
         const i = State.idx(x, y);
-        if (!State.isLand(i)) continue;
-        if (State.owner[i] === id) continue;
-        // enemy territory defended by an engaged enemy unit is harder to take
-        if (State.owner[i] && u.engaged && Math.random() < 0.6) continue;
+        if (!State.isLand(i) || State.owner[i] === id) continue;
+        if (strength < 1 && Math.random() > strength) continue;
         History.setOwner(i, id);
       }
     }

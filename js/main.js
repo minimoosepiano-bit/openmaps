@@ -50,9 +50,8 @@ const Main = (() => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const map = { b: 'paint', e: 'erase', g: 'fill', i: 'picker', l: 'land', w: 'water', u: 'unit', v: 'select', h: 'pan' };
     const k = e.key.toLowerCase();
-    if (k === 'q') { Tools.rotateSelected(-Math.PI / 12); return; }
-    if (k === 'e' && e.shiftKey) { Tools.rotateSelected(Math.PI / 12); return; }
     if (map[k] && !e.shiftKey) { Tools.setTool(map[k]); return; }
+    if (e.key === 'Escape') { if (State.selectedUnit) Tools.clearOrders(State.selectedUnit); return; }
     switch (e.key) {
       case ' ': e.preventDefault(); if (!e.repeat) Sim.toggle(); break;
       case '[': State.brushSize = Math.max(1, State.brushSize - 1); UI.refreshBrush(); break;

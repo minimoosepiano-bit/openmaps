@@ -93,7 +93,9 @@ const Tools = (() => {
       canvas.style.cursor = 'grabbing';
       return;
     }
-    if (e.button === 2) { // right-click: quick pick nation
+    if (e.button === 2) { // right-click: clear a unit's arrow, otherwise quick-pick nation
+      const hitU = Render.unitAt(w.x, w.y);
+      if (hitU) { if (hitU.path.length) { History.touch(); hitU.path = []; History.commit(); } UI.selectUnit(hitU.id); return; }
       const i = State.idx(Math.floor(w.x), Math.floor(w.y));
       if (State.inBounds(Math.floor(w.x), Math.floor(w.y)) && State.owner[i]) UI.selectNation(State.owner[i]);
       return;
@@ -101,20 +103,17 @@ const Tools = (() => {
 
     // unit interactions are available in the select and unit tools
     if (tool === 'select' || tool === 'unit') {
-      const sel = State.unit(State.selectedUnit);
-      if (sel) {
-        const hp = Render.handlePos(sel);
-        if (Util.dist(w.x, w.y, hp.x, hp.y) <= hp.r * 1.5) {
-          History.touch();
-          drag = { kind: 'rotate', unit: sel };
-          return;
-        }
-      }
       const hit = Render.unitAt(w.x, w.y);
       if (hit) {
         UI.selectUnit(hit.id);
-        History.touch();
-        drag = { kind: 'unit', unit: hit, ox: hit.x - w.x, oy: hit.y - w.y, moved: false };
+        if (e.shiftKey) {
+          // shift-drag: relocate the unit without capturing anything
+          History.touch();
+          drag = { kind: 'unit', unit: hit, ox: hit.x - w.x, oy: hit.y - w.y };
+        } else {
+          // plain drag: draw a movement arrow
+          drag = { kind: 'arrow', unit: hit, pts: [{ x: hit.x, y: hit.y, nation: hit.nation }], dist: 0 };
+        }
         return;
       }
       if (tool === 'unit') {
@@ -122,9 +121,10 @@ const Tools = (() => {
         const x = Math.floor(w.x), y = Math.floor(w.y);
         if (!State.inBounds(x, y)) return;
         History.touch();
-        const u = State.addUnit(State.selectedNation, w.x, w.y, 0, 3);
+        const u = State.addUnit(State.selectedNation, w.x, w.y, 3);
         History.commit();
         UI.selectUnit(u.id);
+        UI.toast('Drag from the army to draw its arrow');
         return;
       }
       UI.selectUnit(null);
@@ -171,13 +171,16 @@ const Tools = (() => {
       case 'unit': {
         const u = drag.unit;
         u.x = Util.clamp(w.x + drag.ox, 0, State.w - 1); u.y = Util.clamp(w.y + drag.oy, 0, State.h - 1);
-        drag.moved = true;
         break;
       }
-      case 'rotate': {
-        const u = drag.unit;
-        u.angle = Math.atan2(w.y - u.y, w.x - u.x);
-        UI.refreshUnit();
+      case 'arrow': {
+        const last = drag.pts[drag.pts.length - 1];
+        const px = Util.clamp(w.x, 0, State.w - 1), py = Util.clamp(w.y, 0, State.h - 1);
+        const d = Util.dist(last.x, last.y, px, py);
+        drag.dist += d;
+        // keep a waypoint every ~2 cells so the arrow follows the drawn curve
+        if (d >= 2) drag.pts.push({ x: px, y: py });
+        Render.pendingArrow = drag.dist > 1.5 ? [...drag.pts, { x: px, y: py }] : null;
         break;
       }
     }
@@ -185,7 +188,22 @@ const Tools = (() => {
 
   function onUp(e) {
     if (!drag) return;
-    if (drag.kind === 'paint' || drag.kind === 'unit' || drag.kind === 'rotate') History.commit();
+    if (drag.kind === 'arrow') {
+      Render.pendingArrow = null;
+      if (drag.dist > 1.5) {
+        const s = Render.clientToScreen(e); const w = Render.screenToWorld(s.x, s.y);
+        const end = { x: Util.clamp(w.x, 0, State.w - 1), y: Util.clamp(w.y, 0, State.h - 1) };
+        const pts = drag.pts.slice(1).map(p => ({ x: p.x, y: p.y }));
+        if (!pts.length || Util.dist(pts[pts.length - 1].x, pts[pts.length - 1].y, end.x, end.y) > 0.5) pts.push(end);
+        History.touch();
+        drag.unit.path = pts;
+        drag.unit.angle = Math.atan2(pts[0].y - drag.unit.y, pts[0].x - drag.unit.x);
+        History.commit();
+        UI.refreshUnit();
+        if (!State.playing) UI.toast('Arrow set — press PLAY to move');
+      }
+    }
+    if (drag.kind === 'paint' || drag.kind === 'unit') History.commit();
     if (drag.kind === 'pan') canvas.style.cursor = State.tool === 'pan' ? 'grab' : 'crosshair';
     drag = null; lastPaint = null;
   }
@@ -199,10 +217,10 @@ const Tools = (() => {
     Render.zoomAt(s.x, s.y, e.deltaY < 0 ? 1.15 : 1 / 1.15);
   }
 
-  function rotateSelected(delta) {
-    const u = State.unit(State.selectedUnit); if (!u) return;
-    History.touch(); u.angle += delta; History.commit(); UI.refreshUnit();
+  function clearOrders(id) {
+    const u = State.unit(id); if (!u || !u.path.length) return;
+    History.touch(); u.path = []; History.commit(); UI.refreshUnit();
   }
 
-  return { init, setTool, rotateSelected, get dragging() { return !!drag; } };
+  return { init, setTool, clearOrders, get dragging() { return !!drag; } };
 })();

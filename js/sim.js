@@ -17,12 +17,11 @@ const Sim = (() => {
   function step() {
     const units = State.units;
     const active = State.arrows.length || units.some(u => u.path.length || u.engaged);
-    // a wave of movement that starts after a lull is a new advance: its trail draws lighter
-    const moving = State.arrows.some(a => a.path.length) || units.some(u => u.path.length);
-    if (moving && !State.advanceActive) { State.beginAdvance(); State.advanceActive = true; }
-    else if (!moving) State.advanceActive = false;
     if (!active) return;
     History.begin();
+    // every territory change is its own generation: the land taken right now draws lighter,
+    // and the land taken a moment ago settles to the plain nation colour
+    State.beginAdvance();
     const range = u => Render.unitRadius(u) + 1.5;
 
     // 1. contact: enemy units and arrow fronts within reach of each other are engaged

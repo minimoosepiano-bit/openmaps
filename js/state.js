@@ -26,8 +26,7 @@ const State = {
   showGrid: false,
 
   /* simulation */
-  advanceGen: 0,      // id of the advance in progress (cells with this gen draw lighter)
-  advanceActive: false,
+  advanceGen: 0,      // id of the latest territory change (cells with this gen draw lighter)
   playing: true,
   speed: 2,
   tick: 0,
@@ -125,7 +124,7 @@ const State = {
     this.elev = MapGen.generate(w, h, type, seed);
     this.owner = new Uint16Array(w * h);
     this.gen = new Uint16Array(w * h);
-    this.advanceGen = 0; this.advanceActive = false;
+    this.advanceGen = 0;
     this.nations = []; this.units = []; this.arrows = [];
     this.nextNationId = 1; this.nextUnitId = 1; this.nextArrowId = 1;
     this.selectedNation = 0; this.selectedUnit = null;
@@ -136,8 +135,8 @@ const State = {
     if (this.nations.length) this.selectedNation = this.nations[0].id;
   },
 
-  /* Start a new advance: everything captured from now on draws as a fresh trail,
-     and the previous advance's trail settles to the plain nation colour. */
+  /* Start a new generation: land captured from now on draws as a fresh trail, and the
+     land captured in the previous generation settles to the plain nation colour. */
   beginAdvance() { this.advanceGen = this.advanceGen % 65535 + 1; return this.advanceGen; },
 
   /* Scatter nations on land and grow them with a flood-fill "race". */
@@ -201,7 +200,7 @@ const State = {
     this.elev = bytes(d.elev);
     this.owner = new Uint16Array(bytes(d.owner).buffer);
     this.gen = d.gen ? new Uint16Array(bytes(d.gen).buffer) : new Uint16Array(this.w * this.h);
-    this.advanceGen = d.advanceGen || 0; this.advanceActive = false;
+    this.advanceGen = d.advanceGen || 0;
     this.nations = d.nations; this.units = d.units; this.arrows = d.arrows || [];
     this.nextNationId = d.nextNationId; this.nextUnitId = d.nextUnitId; this.nextArrowId = d.nextArrowId || 1;
     this.selectedNation = this.nations.length ? this.nations[0].id : 0;

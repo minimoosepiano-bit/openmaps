@@ -28,9 +28,9 @@ python3 -m http.server 8000
   to that nation; the brush size sets the width of the swath. Thin gaps between neighbouring
   arrows, and any pocket of land an advance fully surrounds, are filled in automatically.
   Enemy arrows that collide stop and fight; width is strength, and the winner carries on.
-- **Conquest trail** – land taken by the advance in progress is drawn in a lighter shade of
-  the conquering nation's colour, so you can see exactly what the current push gained. As
-  soon as the next advance begins, that trail settles to the full nation colour.
+- **Conquest trail** – the land taken by the newest territory change is drawn in a lighter
+  shade of the conquering nation's colour and settles to the full colour as soon as the next
+  change happens, so an advancing front trails a bright leading edge behind it.
 - **Armies** – place a unit, then drag from it to draw its arrow. The army marches along it
   and converts the land it crosses. When enemy armies meet they stop and fight; the bigger, healthier side wins and
   carries on. Pause time to queue several arrows, reinforce, resize or disband units to

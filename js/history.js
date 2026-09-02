@@ -14,6 +14,8 @@ const History = (() => {
   function reset() {
     initial = {
       owner: new Uint16Array(State.owner),
+      gen: new Uint16Array(State.gen),
+      advanceGen: State.advanceGen,
       elev: new Uint8Array(State.elev),
       units: clone(State.units),
       arrows: clone(State.arrows),
@@ -38,10 +40,10 @@ const History = (() => {
     truncate();
     pending = { cells: new Map(), elev: new Map() };
   }
-  function setOwner(i, v) {
-    if (State.owner[i] === v) return;
-    if (!pending.cells.has(i)) pending.cells.set(i, State.owner[i]);
-    State.owner[i] = v;
+  function setOwner(i, v, gen = 0) {
+    if (State.owner[i] === v && State.gen[i] === gen) return;
+    if (!pending.cells.has(i)) pending.cells.set(i, { o: State.owner[i], g: State.gen[i] });
+    State.owner[i] = v; State.gen[i] = gen;
     State.dirty = true; State.labelsDirty = true;
   }
   function setElev(i, v) {
@@ -60,14 +62,16 @@ const History = (() => {
     const nationsChanged = nj !== lastNationsJson;
     if (!p.cells.size && !p.elev.size && !p.forced && !nationsChanged) return false;
 
-    const cells = new Int32Array(p.cells.size * 3);
+    const cells = new Int32Array(p.cells.size * 5);
     let k = 0;
-    for (const [i, old] of p.cells) { cells[k++] = i; cells[k++] = old; cells[k++] = State.owner[i]; }
+    for (const [i, old] of p.cells) {
+      cells[k++] = i; cells[k++] = old.o; cells[k++] = State.owner[i]; cells[k++] = old.g; cells[k++] = State.gen[i];
+    }
     const elev = new Int32Array(p.elev.size * 3);
     k = 0;
     for (const [i, old] of p.elev) { elev[k++] = i; elev[k++] = old; elev[k++] = State.elev[i]; }
 
-    frames.push({ cells, elev, units: clone(State.units), arrows: clone(State.arrows), nations: nationsChanged ? clone(State.nations) : null });
+    frames.push({ cells, elev, units: clone(State.units), arrows: clone(State.arrows), advanceGen: State.advanceGen, nations: nationsChanged ? clone(State.nations) : null });
     if (nationsChanged) lastNationsJson = nj;
     cursor = frames.length;
     UI.timelineChanged();
@@ -83,7 +87,10 @@ const History = (() => {
 
   function applyFrame(f, forward) {
     const c = f.cells, e = f.elev;
-    for (let i = 0; i < c.length; i += 3) State.owner[c[i]] = forward ? c[i + 2] : c[i + 1];
+    for (let i = 0; i < c.length; i += 5) {
+      State.owner[c[i]] = forward ? c[i + 2] : c[i + 1];
+      State.gen[c[i]] = forward ? c[i + 4] : c[i + 3];
+    }
     for (let i = 0; i < e.length; i += 3) State.elev[e[i]] = forward ? e[i + 2] : e[i + 1];
   }
 
@@ -96,6 +103,7 @@ const History = (() => {
     while (cursor > n) { cursor--; applyFrame(frames[cursor], false); }
     State.units = clone(unitsAt(cursor));
     State.arrows = clone(arrowsAt(cursor));
+    State.advanceGen = cursor === 0 ? initial.advanceGen : (frames[cursor - 1].advanceGen || 0);
     State.nations = clone(nationsAt(cursor));
     if (!State.nation(State.selectedNation)) State.selectedNation = State.nations.length ? State.nations[0].id : 0;
     if (State.selectedUnit && !State.unit(State.selectedUnit)) State.selectedUnit = null;
@@ -117,19 +125,21 @@ const History = (() => {
   const b64 = Util.b64, unb64 = Util.unb64;
   function serialize() {
     return {
-      initial: { owner: b64(initial.owner), elev: b64(initial.elev), units: initial.units, arrows: initial.arrows, nations: initial.nations },
-      frames: frames.map(f => ({ c: b64(f.cells), e: b64(f.elev), u: f.units, a: f.arrows, n: f.nations })),
+      initial: { owner: b64(initial.owner), gen: b64(initial.gen), advanceGen: initial.advanceGen, elev: b64(initial.elev), units: initial.units, arrows: initial.arrows, nations: initial.nations },
+      frames: frames.map(f => ({ c: b64(f.cells), e: b64(f.elev), u: f.units, a: f.arrows, g: f.advanceGen, n: f.nations })),
       cursor,
     };
   }
   function deserialize(d) {
     initial = {
       owner: new Uint16Array(unb64(d.initial.owner).buffer),
+      gen: d.initial.gen ? new Uint16Array(unb64(d.initial.gen).buffer) : new Uint16Array(State.w * State.h),
+      advanceGen: d.initial.advanceGen || 0,
       elev: unb64(d.initial.elev),
       units: d.initial.units, arrows: d.initial.arrows || [], nations: d.initial.nations,
     };
     frames = d.frames.map(f => ({
-      cells: new Int32Array(unb64(f.c).buffer), elev: new Int32Array(unb64(f.e).buffer), units: f.u, arrows: f.a || [], nations: f.n,
+      cells: new Int32Array(unb64(f.c).buffer), elev: new Int32Array(unb64(f.e).buffer), units: f.u, arrows: f.a || [], advanceGen: f.g || 0, nations: f.n,
     }));
     cursor = frames.length; // the saved owner/elev arrays are the head state
     lastNationsJson = JSON.stringify(nationsAt(cursor));

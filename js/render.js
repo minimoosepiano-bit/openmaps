@@ -69,7 +69,8 @@ const Render = (() => {
 
   function renderMap() {
     ensureBuffer();
-    const w = State.w, h = State.h, elev = State.elev, owner = State.owner, SEA = MapGen.SEA;
+    const w = State.w, h = State.h, elev = State.elev, owner = State.owner, gen = State.gen, SEA = MapGen.SEA;
+    const curGen = State.advanceGen;
     const borders = State.showBorders;
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
@@ -89,8 +90,9 @@ const Render = (() => {
           let c = t < 0.6 ? mix(C.lowLand, C.highLand, t / 0.6) : mix(C.highLand, C.peak, (t - 0.6) / 0.4);
           const o = owner[i];
           if (o) {
+            const fresh = gen[i] !== 0 && gen[i] === curGen;
             const nc = colorOf(o);
-            c = mix(c, nc, 0.78);
+            c = fresh ? mix(mix(c, nc, 0.9), [255, 255, 255], 0.4) : mix(c, nc, 0.78);
             if (borders) {
               // 1px border on this cell if the land neighbour to the left or above belongs to someone else
               const l = x > 0 && elev[i - 1] >= SEA && owner[i - 1] !== o;

@@ -17,6 +17,10 @@ const Sim = (() => {
   function step() {
     const units = State.units;
     const active = State.arrows.length || units.some(u => u.path.length || u.engaged);
+    // a wave of movement that starts after a lull is a new advance: its trail draws lighter
+    const moving = State.arrows.some(a => a.path.length) || units.some(u => u.path.length);
+    if (moving && !State.advanceActive) { State.beginAdvance(); State.advanceActive = true; }
+    else if (!moving) State.advanceActive = false;
     if (!active) return;
     History.begin();
     const range = u => Render.unitRadius(u) + 1.5;
@@ -98,6 +102,7 @@ const Sim = (() => {
   /* Convert the land around the unit to its nation. */
   function capture(u, strength) { captureDisc(u.x, u.y, Math.ceil(Render.unitRadius(u) + 1), u.nation, strength); }
 
+
   function captureDisc(ux, uy, R, id, strength) {
     const cx = Math.round(ux), cy = Math.round(uy);
     for (let dy = -R; dy <= R; dy++) {
@@ -108,7 +113,7 @@ const Sim = (() => {
         const i = State.idx(x, y);
         if (!State.isLand(i) || State.owner[i] === id) continue;
         if (strength < 1 && Math.random() > strength) continue;
-        History.setOwner(i, id);
+        History.setOwner(i, id, State.advanceGen);
       }
     }
   }
@@ -154,7 +159,7 @@ const Sim = (() => {
       }
       if (inside) changed.push(gi);
     }
-    for (const gi of changed) History.setOwner(gi, id);
+    for (const gi of changed) History.setOwner(gi, id, State.advanceGen);
 
     // pocket fill: flood foreign land touching our front; absorb it if it never reaches
     // water, the map edge, or too far away
@@ -184,7 +189,7 @@ const Sim = (() => {
           if (!seen.has(j)) { seen.add(j); stack.push(j); }
         }
       }
-      if (!open) for (const i of region) History.setOwner(i, id);
+      if (!open) for (const i of region) History.setOwner(i, id, State.advanceGen);
     }
   }
 

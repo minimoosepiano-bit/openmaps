@@ -21,30 +21,34 @@ const Sim = (() => {
     History.begin();
     const range = u => Render.unitRadius(u) + 1.5;
 
-    // 1. contact: enemy units within reach of each other are engaged
-    for (const u of units) u.engaged = false;
+    // 1. contact: enemy units and arrow fronts within reach of each other are engaged
+    const fighters = [...units, ...State.arrows];
+    for (const f of fighters) f.engaged = false;
     const enemies = new Map();
-    for (let a = 0; a < units.length; a++) {
-      const ua = units[a];
-      for (let b = a + 1; b < units.length; b++) {
-        const ub = units[b];
-        if (ua.nation === ub.nation) continue;
-        const d = Util.dist(ua.x, ua.y, ub.x, ub.y);
-        if (d <= range(ua) + range(ub)) {
-          ua.engaged = ub.engaged = true;
-          if (!enemies.has(ua.id)) enemies.set(ua.id, []); enemies.get(ua.id).push(ub);
-          if (!enemies.has(ub.id)) enemies.set(ub.id, []); enemies.get(ub.id).push(ua);
+    const isArrow = f => State.arrows.includes(f);
+    const reach = f => isArrow(f) ? f.size + 1.5 : range(f);
+    for (let a = 0; a < fighters.length; a++) {
+      const fa = fighters[a];
+      for (let b = a + 1; b < fighters.length; b++) {
+        const fb = fighters[b];
+        if (fa.nation === fb.nation) continue;
+        const d = Util.dist(fa.x, fa.y, fb.x, fb.y);
+        if (d <= reach(fa) + reach(fb)) {
+          fa.engaged = fb.engaged = true;
+          if (!enemies.has(fa)) enemies.set(fa, []); enemies.get(fa).push(fb);
+          if (!enemies.has(fb)) enemies.set(fb, []); enemies.get(fb).push(fa);
         }
       }
     }
 
     // 2. combat: damage proportional to the attacker's size and remaining strength
-    for (const u of units) {
-      const foes = enemies.get(u.id); if (!foes) continue;
-      const strength = u.size * (0.5 + 0.5 * u.hp / State.maxHp(u.size));
-      for (const f of foes) f.hp -= (strength * (0.7 + Math.random() * 0.6) * 2.2) / foes.length;
+    for (const f of fighters) {
+      const foes = enemies.get(f); if (!foes) continue;
+      const strength = f.size * (0.5 + 0.5 * f.hp / State.maxHp(f.size));
+      for (const e of foes) e.hp -= (strength * (0.7 + Math.random() * 0.6) * 2.2) / foes.length;
     }
     for (let i = units.length - 1; i >= 0; i--) if (units[i].hp <= 0) State.removeUnit(units[i].id);
+    for (let i = State.arrows.length - 1; i >= 0; i--) if (State.arrows[i].hp <= 0) State.removeArrow(State.arrows[i].id);
 
     // 3. movement along the arrow + capture
     for (const u of units) {
@@ -66,6 +70,7 @@ const Sim = (() => {
 
     // 4. free arrows: an advancing front with no unit behind it
     for (const a of State.arrows) {
+      if (a.engaged) { captureDisc(a.x, a.y, a.size, a.nation, 0.4); continue; }
       advance(a, SPEED * 1.4);
       captureDisc(a.x, a.y, a.size, a.nation, 1);
       fillGaps(a.x, a.y, a.size, a.nation);

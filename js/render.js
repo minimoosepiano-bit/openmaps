@@ -263,10 +263,17 @@ const Render = (() => {
       const n = State.nation(a.nation);
       const col = n ? n.color : '#fff';
       drawArrow(c, col, [{ x: a.x, y: a.y }, ...a.path], camX, camY, zoom, 0.9);
-      // front marker
+      // front marker (red ring while fighting) + strength bar
       const sx = (a.x - camX) * zoom, sy = (a.y - camY) * zoom;
-      c.beginPath(); c.arc(sx, sy, Math.max(3, zoom * 1.1), 0, Math.PI * 2);
-      c.fillStyle = col; c.fill(); c.strokeStyle = '#000'; c.lineWidth = 1.5; c.stroke();
+      const mr = Math.max(3, zoom * 1.1);
+      c.beginPath(); c.arc(sx, sy, mr, 0, Math.PI * 2);
+      c.fillStyle = col; c.fill(); c.strokeStyle = a.engaged ? '#ff3b3b' : '#000'; c.lineWidth = a.engaged ? 2.5 : 1.5; c.stroke();
+      if (a.engaged || a.hp < State.maxHp(a.size)) {
+        const hpw = mr * 4, hp = Math.max(0, a.hp / State.maxHp(a.size));
+        c.fillStyle = '#000'; c.fillRect(sx - hpw / 2 - 1, sy + mr + 3, hpw + 2, 5);
+        c.fillStyle = hp > 0.5 ? '#3ddc5a' : hp > 0.25 ? '#f2b134' : '#e0563b';
+        c.fillRect(sx - hpw / 2, sy + mr + 4, hpw * hp, 3);
+      }
     }
     if (overlays && pendingArrow && pendingArrow.length > 1) {
       const n = State.nation(pendingArrow[0].nation);

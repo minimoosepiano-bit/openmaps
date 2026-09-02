@@ -9,7 +9,7 @@ const State = {
   owner: null,   // Uint16Array – nation id per cell, 0 = unclaimed
   nations: [],   // { id, name, color, flag: string[FLAG_W*FLAG_H], label: bool }
   units: [],     // { id, nation, x, y, angle (rad, facing), size, hp, path:[{x,y}], engaged }
-  arrows: [],    // free arrows (no unit): { id, nation, x, y, path:[{x,y}], size } – an advancing front
+  arrows: [],    // free arrows (no unit): { id, nation, x, y, path:[{x,y}], size, hp, engaged } – an advancing front
   nextNationId: 1,
   nextUnitId: 1,
   nextArrowId: 1,
@@ -106,7 +106,7 @@ const State = {
     return u;
   },
   addArrow(nation, x, y, path, size) {
-    const a = { id: this.nextArrowId++, nation, x, y, path, size };
+    const a = { id: this.nextArrowId++, nation, x, y, path, size, hp: this.maxHp(size), engaged: false };
     this.arrows.push(a);
     return a;
   },

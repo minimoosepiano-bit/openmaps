@@ -9,8 +9,10 @@ const State = {
   owner: null,   // Uint16Array – nation id per cell, 0 = unclaimed
   nations: [],   // { id, name, color, flag: string[FLAG_W*FLAG_H], label: bool }
   units: [],     // { id, nation, x, y, angle (rad, facing), size, hp, path:[{x,y}], engaged }
+  arrows: [],    // free arrows (no unit): { id, nation, x, y, path:[{x,y}], size } – an advancing front
   nextNationId: 1,
   nextUnitId: 1,
+  nextArrowId: 1,
   seed: 1,
 
   /* editor */
@@ -90,6 +92,7 @@ const State = {
   removeNation(id) {
     this.nations = this.nations.filter(n => n.id !== id);
     this.units = this.units.filter(u => u.nation !== id);
+    this.arrows = this.arrows.filter(a => a.nation !== id);
     for (let i = 0; i < this.owner.length; i++) if (this.owner[i] === id) this.owner[i] = 0;
     if (this.selectedNation === id) this.selectedNation = this.nations.length ? this.nations[0].id : 0;
     if (this.selectedUnit && !this.unit(this.selectedUnit)) this.selectedUnit = null;
@@ -102,6 +105,12 @@ const State = {
     this.units.push(u);
     return u;
   },
+  addArrow(nation, x, y, path, size) {
+    const a = { id: this.nextArrowId++, nation, x, y, path, size };
+    this.arrows.push(a);
+    return a;
+  },
+  removeArrow(id) { this.arrows = this.arrows.filter(a => a.id !== id); },
   removeUnit(id) {
     this.units = this.units.filter(u => u.id !== id);
     if (this.selectedUnit === id) this.selectedUnit = null;
@@ -112,8 +121,8 @@ const State = {
     this.w = w; this.h = h; this.seed = seed;
     this.elev = MapGen.generate(w, h, type, seed);
     this.owner = new Uint16Array(w * h);
-    this.nations = []; this.units = [];
-    this.nextNationId = 1; this.nextUnitId = 1;
+    this.nations = []; this.units = []; this.arrows = [];
+    this.nextNationId = 1; this.nextUnitId = 1; this.nextArrowId = 1;
     this.selectedNation = 0; this.selectedUnit = null;
     this.playing = true; this.tick = 0;
     this.dirty = true; this.labelsDirty = true;
@@ -170,8 +179,8 @@ const State = {
     const data = {
       version: 1, w: this.w, h: this.h, seed: this.seed,
       elev: b64(this.elev), owner: b64(this.owner),
-      nations: this.nations, units: this.units,
-      nextNationId: this.nextNationId, nextUnitId: this.nextUnitId,
+      nations: this.nations, units: this.units, arrows: this.arrows,
+      nextNationId: this.nextNationId, nextUnitId: this.nextUnitId, nextArrowId: this.nextArrowId,
     };
     if (includeHistory) data.history = History.serialize();
     return JSON.stringify(data);
@@ -182,8 +191,8 @@ const State = {
     this.w = d.w; this.h = d.h; this.seed = d.seed || 1;
     this.elev = bytes(d.elev);
     this.owner = new Uint16Array(bytes(d.owner).buffer);
-    this.nations = d.nations; this.units = d.units;
-    this.nextNationId = d.nextNationId; this.nextUnitId = d.nextUnitId;
+    this.nations = d.nations; this.units = d.units; this.arrows = d.arrows || [];
+    this.nextNationId = d.nextNationId; this.nextUnitId = d.nextUnitId; this.nextArrowId = d.nextArrowId || 1;
     this.selectedNation = this.nations.length ? this.nations[0].id : 0;
     this.selectedUnit = null; this.playing = true;
     for (const u of this.units) { if (!u.path) u.path = []; }

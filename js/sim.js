@@ -16,7 +16,7 @@ const Sim = (() => {
 
   function step() {
     const units = State.units;
-    const active = units.some(u => u.path.length || u.engaged);
+    const active = State.arrows.length || units.some(u => u.path.length || u.engaged);
     if (!active) return;
     History.begin();
     const range = u => Render.unitRadius(u) + 1.5;
@@ -62,14 +62,37 @@ const Sim = (() => {
       u.x = Util.clamp(u.x, 0, State.w - 1); u.y = Util.clamp(u.y, 0, State.h - 1);
       capture(u, 1);
     }
+
+    // 4. free arrows: an advancing front with no unit behind it
+    for (const a of State.arrows) {
+      advance(a, SPEED * 1.4);
+      captureDisc(a.x, a.y, a.size, a.nation, 1);
+      if (!a.path.length) State.removeArrow(a.id);
+    }
     State.tick++;
     History.commit();
   }
 
+  /* Move a thing with {x, y, path, angle?} along its path by `dist` cells. */
+  function advance(o, dist) {
+    let remaining = dist;
+    while (remaining > 0 && o.path.length) {
+      const t = o.path[0];
+      const d = Util.dist(o.x, o.y, t.x, t.y);
+      if (d <= remaining) { o.x = t.x; o.y = t.y; remaining -= d; o.path.shift(); continue; }
+      const ang = Math.atan2(t.y - o.y, t.x - o.x);
+      o.angle = ang;
+      o.x += Math.cos(ang) * remaining; o.y += Math.sin(ang) * remaining;
+      remaining = 0;
+    }
+    o.x = Util.clamp(o.x, 0, State.w - 1); o.y = Util.clamp(o.y, 0, State.h - 1);
+  }
+
   /* Convert the land around the unit to its nation. */
-  function capture(u, strength) {
-    const R = Math.ceil(Render.unitRadius(u) + 1);
-    const cx = Math.round(u.x), cy = Math.round(u.y), id = u.nation;
+  function capture(u, strength) { captureDisc(u.x, u.y, Math.ceil(Render.unitRadius(u) + 1), u.nation, strength); }
+
+  function captureDisc(ux, uy, R, id, strength) {
+    const cx = Math.round(ux), cy = Math.round(uy);
     for (let dy = -R; dy <= R; dy++) {
       for (let dx = -R; dx <= R; dx++) {
         if (dx * dx + dy * dy > R * R + 0.5) continue;

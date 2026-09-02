@@ -23,9 +23,11 @@ python3 -m http.server 8000
 - **Terrain tools** – raise land or sink it into the sea.
 - **Nation editor** – rename, recolour, toggle labels and design a 12×8 pixel flag with a
   palette, presets (tricolour, cross, nordic, diagonal, …) or a random generator.
-- **Armies & arrows** – place a unit, then drag from it to draw an arrow (straight or
-  curved). The army marches along the arrow and every piece of land it crosses flips to its
-  nation. When enemy armies meet they stop and fight; the bigger, healthier side wins and
+- **Arrows** – with the Arrow tool, drag anywhere to draw an arrow (straight or curved) for
+  the selected nation. A front advances along it and every piece of land it crosses flips
+  to that nation; the brush size sets the width of the swath.
+- **Armies** – place a unit, then drag from it to draw its arrow. The army marches along it
+  and converts the land it crosses. When enemy armies meet they stop and fight; the bigger, healthier side wins and
   carries on. Pause time to queue several arrows, reinforce, resize or disband units to
   decide the outcome.
 - **Timeline** – every stroke, edit and simulation tick is a frame. Undo, scrub, play back.
@@ -42,6 +44,7 @@ python3 -m http.server 8000
 | `U` `V` `H` | Unit / Arrow / Pan tools |
 | `[` `]` or Ctrl+wheel | Brush size |
 | Wheel · Space+drag · middle mouse | Zoom · pan |
+| Drag on map (Arrow tool) | Draw a free arrow for the selected nation |
 | Drag from army · Shift-drag | Draw its arrow · relocate it |
 | `Esc` · right-click army | Cancel its arrow |
 | `Ctrl+Z` | Undo |

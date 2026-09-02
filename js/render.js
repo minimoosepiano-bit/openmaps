@@ -259,6 +259,15 @@ const Render = (() => {
       const n = State.nation(u.nation);
       drawArrow(c, n ? n.color : '#fff', [{ x: u.x, y: u.y }, ...u.path], camX, camY, zoom, 0.85);
     }
+    for (const a of State.arrows) {
+      const n = State.nation(a.nation);
+      const col = n ? n.color : '#fff';
+      drawArrow(c, col, [{ x: a.x, y: a.y }, ...a.path], camX, camY, zoom, 0.9);
+      // front marker
+      const sx = (a.x - camX) * zoom, sy = (a.y - camY) * zoom;
+      c.beginPath(); c.arc(sx, sy, Math.max(3, zoom * 1.1), 0, Math.PI * 2);
+      c.fillStyle = col; c.fill(); c.strokeStyle = '#000'; c.lineWidth = 1.5; c.stroke();
+    }
     if (overlays && pendingArrow && pendingArrow.length > 1) {
       const n = State.nation(pendingArrow[0].nation);
       drawArrow(c, n ? n.color : '#fff', pendingArrow, camX, camY, zoom, 0.6);

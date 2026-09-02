@@ -16,6 +16,7 @@ const History = (() => {
       owner: new Uint16Array(State.owner),
       elev: new Uint8Array(State.elev),
       units: clone(State.units),
+      arrows: clone(State.arrows),
       nations: clone(State.nations),
     };
     lastNationsJson = JSON.stringify(State.nations);
@@ -66,7 +67,7 @@ const History = (() => {
     k = 0;
     for (const [i, old] of p.elev) { elev[k++] = i; elev[k++] = old; elev[k++] = State.elev[i]; }
 
-    frames.push({ cells, elev, units: clone(State.units), nations: nationsChanged ? clone(State.nations) : null });
+    frames.push({ cells, elev, units: clone(State.units), arrows: clone(State.arrows), nations: nationsChanged ? clone(State.nations) : null });
     if (nationsChanged) lastNationsJson = nj;
     cursor = frames.length;
     UI.timelineChanged();
@@ -78,6 +79,7 @@ const History = (() => {
     return initial.nations;
   }
   function unitsAt(n) { return n === 0 ? initial.units : frames[n - 1].units; }
+  function arrowsAt(n) { return (n === 0 ? initial.arrows : frames[n - 1].arrows) || []; }
 
   function applyFrame(f, forward) {
     const c = f.cells, e = f.elev;
@@ -93,6 +95,7 @@ const History = (() => {
     while (cursor < n) { applyFrame(frames[cursor], true); cursor++; }
     while (cursor > n) { cursor--; applyFrame(frames[cursor], false); }
     State.units = clone(unitsAt(cursor));
+    State.arrows = clone(arrowsAt(cursor));
     State.nations = clone(nationsAt(cursor));
     if (!State.nation(State.selectedNation)) State.selectedNation = State.nations.length ? State.nations[0].id : 0;
     if (State.selectedUnit && !State.unit(State.selectedUnit)) State.selectedUnit = null;
@@ -114,8 +117,8 @@ const History = (() => {
   const b64 = Util.b64, unb64 = Util.unb64;
   function serialize() {
     return {
-      initial: { owner: b64(initial.owner), elev: b64(initial.elev), units: initial.units, nations: initial.nations },
-      frames: frames.map(f => ({ c: b64(f.cells), e: b64(f.elev), u: f.units, n: f.nations })),
+      initial: { owner: b64(initial.owner), elev: b64(initial.elev), units: initial.units, arrows: initial.arrows, nations: initial.nations },
+      frames: frames.map(f => ({ c: b64(f.cells), e: b64(f.elev), u: f.units, a: f.arrows, n: f.nations })),
       cursor,
     };
   }
@@ -123,10 +126,10 @@ const History = (() => {
     initial = {
       owner: new Uint16Array(unb64(d.initial.owner).buffer),
       elev: unb64(d.initial.elev),
-      units: d.initial.units, nations: d.initial.nations,
+      units: d.initial.units, arrows: d.initial.arrows || [], nations: d.initial.nations,
     };
     frames = d.frames.map(f => ({
-      cells: new Int32Array(unb64(f.c).buffer), elev: new Int32Array(unb64(f.e).buffer), units: f.u, nations: f.n,
+      cells: new Int32Array(unb64(f.c).buffer), elev: new Int32Array(unb64(f.e).buffer), units: f.u, arrows: f.a || [], nations: f.n,
     }));
     cursor = frames.length; // the saved owner/elev arrays are the head state
     lastNationsJson = JSON.stringify(nationsAt(cursor));

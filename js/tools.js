@@ -127,7 +127,15 @@ const Tools = (() => {
         UI.toast('Drag from the army to draw its arrow');
         return;
       }
+      // arrow tool on empty map: a free arrow for the selected nation (or the nation under the cursor)
       UI.selectUnit(null);
+      const x = Math.floor(w.x), y = Math.floor(w.y);
+      if (!State.inBounds(x, y)) return;
+      let nation = State.selectedNation;
+      if (!nation) nation = State.owner[State.idx(x, y)];
+      if (!nation) { UI.toast('Select or create a nation first'); return; }
+      const sx = Util.clamp(w.x, 0, State.w - 1), sy = Util.clamp(w.y, 0, State.h - 1);
+      drag = { kind: 'arrow', unit: null, nation, start: { x: sx, y: sy }, pts: [{ x: sx, y: sy, nation }], dist: 0 };
       return;
     }
 
@@ -196,8 +204,12 @@ const Tools = (() => {
         const pts = drag.pts.slice(1).map(p => ({ x: p.x, y: p.y }));
         if (!pts.length || Util.dist(pts[pts.length - 1].x, pts[pts.length - 1].y, end.x, end.y) > 0.5) pts.push(end);
         History.touch();
-        drag.unit.path = pts;
-        drag.unit.angle = Math.atan2(pts[0].y - drag.unit.y, pts[0].x - drag.unit.x);
+        if (drag.unit) {
+          drag.unit.path = pts;
+          drag.unit.angle = Math.atan2(pts[0].y - drag.unit.y, pts[0].x - drag.unit.x);
+        } else {
+          State.addArrow(drag.nation, drag.start.x, drag.start.y, pts, Util.clamp(State.brushSize, 1, 12));
+        }
         History.commit();
         UI.refreshUnit();
         if (!State.playing) UI.toast('Arrow set — press PLAY to move');
